@@ -8,9 +8,11 @@
 import UIKit
 import Alamofire
 import MBProgressHUD
+import PDFKit
 
 class ViewController: UIViewController {
     var progressHub: MBProgressHUD!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor.darkGray
@@ -25,6 +27,7 @@ class ViewController: UIViewController {
         let downloadQueue = DispatchQueue.global(qos: .default)
         progressHub = MBProgressHUD.showAdded(to: self.view, animated: true)
         progressHub.mode = .annularDeterminate
+
         AF.download("http://qeam.org/qeam/pdf/hackingwithswift.pdf")
             .downloadProgress(queue: downloadQueue) { (progress) in
                 DispatchQueue.main.async {
@@ -32,20 +35,25 @@ class ViewController: UIViewController {
                     print(progressValue)
                     self.progressHub.progress = progressValue
                 }
-                
             }
-            .responseURL(completionHandler: { (responseURL) in
-                if let url = responseURL.fileURL {
-                    let filePath = NSTemporaryDirectory().appending("hackingwithswift.pdf")
-                    
-                    try? FileManager.default.copyItem(at: url, to: URL.init(fileURLWithPath: filePath))
-                    DispatchQueue.main.async {
-                        self.progressHub.hide(animated: true)
+            .response { (url) in
+                DispatchQueue.main.async {
+                    self.progressHub.hide(animated: true)
+                    if let pdfURL = url.value {
+                        self.previewPDF(url: pdfURL!)
                     }
                 }
-            })
+            }
     }
-
+    
+    private func previewPDF(url: URL) {
+        let pdfview = PDFView(frame:self.view.bounds)
+        pdfview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        pdfview.autoScales = true
+        self.view.addSubview(pdfview)
+        let doc = PDFDocument(url: url)
+        pdfview.document = doc
+    }
 }
 
 
